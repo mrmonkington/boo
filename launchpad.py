@@ -2,8 +2,8 @@
 import sys, threading
 import liblo
 import gi
-from gi.repository import Gtk
 gi.require_version('Gtk', '3.0') 
+from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import Gdk
 import cairo
@@ -249,7 +249,7 @@ class Gui(Gtk.Window):
 
         #gobject.threads_init()
 
-        self.table = Gtk.Table(max_layers, max_actions+1, True)
+        self.table = Gtk.Grid() #(max_layers, max_actions+1, True)
         self.add(self.table)
         self.leds = [[False for x in range(max_actions)] for x in range(max_layers)] 
 
@@ -261,12 +261,8 @@ class Gui(Gtk.Window):
             self.headers[lc] = Gtk.Label('%s' % layer['label'])
             self.table.attach(
                 self.headers[lc],
-                0,1,
-                lc,lc+1,
-                Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
-                Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
-                2,
-                2
+                0,lc,
+                1,1
             )
 
             for ac, action in enumerate(layer['rundown']):
@@ -278,12 +274,8 @@ class Gui(Gtk.Window):
                 )
                 self.table.attach(
                     self.leds[lc][ac],
-                    ac+1,ac+1+1,
-                    lc,lc+1,
-                    Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
-                    Gtk.AttachOptions.EXPAND | Gtk.AttachOptions.FILL,
-                    2,
-                    2
+                    ac+1,lc,
+                    1,1
                 )
 
         self.show_all()
