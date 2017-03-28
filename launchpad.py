@@ -18,6 +18,10 @@ import signal
 config = {}
 DEBUG = False
 
+COLOR_PRIME = (0.95, 0.95, 0.35)
+COLOR_ON = (0.35, 0.95, 0.35)
+COLOR_OFF = (0.95, 0.95, 0.95)
+
 class Message(liblo.Message):
     def __init__(self, path, args):
         self._path = path
@@ -28,6 +32,11 @@ class Message(liblo.Message):
 
 def lighten_rgb(col, mul):
     mul = float(mul)
+    hls = list(colorsys.rgb_to_hls(*col))
+    hls[1] = hls[1] + ((1.0 - hls[1]) / mul) * (mul-1)
+    return colorsys.hls_to_rgb(*hls)
+def darken_rgb(col, mul):
+    mul = 1/float(mul)
     hls = list(colorsys.rgb_to_hls(*col))
     hls[1] = hls[1] + ((1.0 - hls[1]) / mul) * (mul-1)
     return colorsys.hls_to_rgb(*hls)
@@ -126,6 +135,7 @@ class Controller(object):
             if DEBUG:
                 print action
             if action['type'] == "OSC":
+                print "Sending %s" % action['path']
                 m = Message(action['path'], action['message'])
                 self.send_osc(m)
             if action['type'] == "setstate":
@@ -175,8 +185,11 @@ class Button(Gtk.Widget):
         #self.msg = msg
         #self.connect("touch-event", self.touched)
         #self.connect("button-press-event", self.clicked)
-        self.color = (0.95, 0.95, 0.95)
+        self.color = COLOR_OFF
         self.set_size_request(80, 60)
+
+        self.set_hexpand(True)
+        self.set_vexpand(True)
 
     #def touched(self, tgt, ev):
     #    # a sort of debounce, cos touch fires loads of events
@@ -184,13 +197,12 @@ class Button(Gtk.Widget):
     #        self.trigger()
 
     def do_draw(self, cr):
-        color = (0.95, 0.95, 0.95)
+        color = COLOR_OFF
         cr.set_source_rgb(*color)
-
         allocation = self.get_allocation()
         cr.rectangle(0, 0, allocation.width, allocation.height)
         cr.fill()
-        cr.set_source_rgb(0.9, 0.9, 0.9)
+        cr.set_source_rgb(*darken_rgb(COLOR_OFF, 1.4))
         cr.rectangle(0, 0, allocation.width, allocation.height)
         cr.stroke()
 
@@ -220,18 +232,18 @@ class Button(Gtk.Widget):
         cr.line_to(allocation.width-6, 11)
         cr.line_to(allocation.width-16, 16)
         cr.close_path()
-        cr.set_source_rgb(0.7, 0.7, 0.7)
+        cr.set_source_rgb(*darken_rgb(COLOR_OFF, 1.4))
         cr.fill()
 
 class TriggerButton(Button):
 
     def __init__(self, layer, label, initial_state):
         Button.__init__(self, label, initial_state)
-        self.color = (0.85, 0.85, 0.85)
+        self.state = initial_state
         self.has_content = False
-        self.is_playing = False
         self.is_queued = False
         self.flash_state = True
+        self.initial_state = initial_state
 
         self.label_index = u"%i" % (layer, )
         self.label_content = label
@@ -240,36 +252,47 @@ class TriggerButton(Button):
         return "falling"
 
     def on(self):
-        self.is_playing = True
+        self.state = "on"
         if DEBUG:
             print "on"
-        self.timeout_id = GObject.timeout_add(1000, self.off)
+        if self.initial_state == 'off':
+            self.timeout_id = GObject.timeout_add(1000, self.off)
+        if self.initial_state == 'prime':
+            self.timeout_id = GObject.timeout_add(1000, self.prime)
         self.queue_draw()
 
     def off(self):
-        self.is_playing = False
+        self.state = "off"
         if DEBUG:
             print "off"
         self.queue_draw()
 
+    def prime(self):
+        self.state = "prime"
+        if DEBUG:
+            print "prime"
+        self.queue_draw()
+
     def do_draw(self, cr):
         # paint background
+        color = COLOR_OFF
         if DEBUG:
             print "draw"
-        color = lighten_rgb(self.color, 1.4)
-        if self.is_playing:
-            color = self.color
+        if self.state == "on":
+            color = COLOR_ON
+        if self.state == "prime":
+            color = COLOR_PRIME
 
         cr.set_source_rgb(*color)
 
         allocation = self.get_allocation()
         cr.rectangle(0, 0, allocation.width, allocation.height)
         cr.fill()
-        cr.set_source_rgb(0.9, 0.9, 0.9)
+        cr.set_source_rgb(*darken_rgb(color, 1.1))
         cr.rectangle(0, 0, allocation.width, allocation.height)
         cr.stroke()
 
-        cr.set_source_rgb(0.3, 0.3, 0.3)
+        cr.set_source_rgb(*darken_rgb(color, 10))
         cr.select_font_face("Monaco", cairo.FONT_SLANT_NORMAL, 
             cairo.FONT_WEIGHT_NORMAL)
         cr.set_font_size(11)
@@ -282,21 +305,21 @@ class TriggerButton(Button):
 
 class ToggleButton(TriggerButton):
     def get_edge(self):
-        if self.is_playing == True:
+        if self.state == "on":
             return "rising"
-        if self.is_playing == False:
+        if self.state in ("off", "prime"):
             return "falling"
 
     def on(self):
-        self.is_playing = True
+        self.state = "on"
         if DEBUG:
             print "on"
         self.queue_draw()
 
     def off(self):
-        self.is_playing = False
+        self.state = "prime"
         if DEBUG:
-            print "off"
+            print "prime"
         self.queue_draw()
 
 class ClearButton(Button):
@@ -337,6 +360,8 @@ class Gui(Gtk.Window):
         #gobject.threads_init()
 
         self.table = Gtk.Grid() #(config.MAX_LAYERS, config.MAX_ACTIONS+1, True)
+        self.table.set_hexpand(True)
+        self.table.set_vexpand(True)
         self.add(self.table)
         self.leds = [[False for x in range(config.MAX_ACTIONS)] for x in range(config.MAX_LAYERS)] 
 
@@ -346,6 +371,7 @@ class Gui(Gtk.Window):
         for lc, layer in enumerate(config.LAYERS):
 
             self.headers[lc] = Gtk.Label('%s' % layer['label'])
+            self.headers[lc].set_valign(Gtk.Align.START)
             self.table.attach(
                 self.headers[lc],
                 0,lc,
@@ -369,10 +395,13 @@ class Gui(Gtk.Window):
                 if action["type"] == "trigger":
                     btype = TriggerButton
                     
+                print action
+                print action['initial']
+                print
                 self.leds[lc][ac] = btype(
                     lc,
                     action['label'],
-                    initial_state = action['initial']
+                    action['initial']
                     #Message(action['path'], action['message'])
                 )
                 self.table.attach(
