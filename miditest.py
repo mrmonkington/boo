@@ -2,7 +2,9 @@ import mido
 import signal
 import sys
 
-with mido.open_input('APC Key 25:APC Key 25 MIDI 1 28:0') as inport, mido.open_output('APC Key 25:APC Key 25 MIDI 1 28:0') as outport:
+midi_device = 'APC Key 25 MIDI 1'
+
+with mido.open_input(midi_device) as inport, mido.open_output(midi_device) as outport:
 
     notes = {}
 

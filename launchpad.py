@@ -10,7 +10,21 @@ import cairo
 import re
 import colorsys
 
-from config import *
+# midi library
+import mido
+import signal
+
+#from config import *
+config = {}
+DEBUG = False
+
+class Message(liblo.Message):
+    def __init__(self, path, args):
+        self._path = path
+        self._args = args
+        super(Message, self).__init__(path, args)
+    def __repr__(self):
+        return "%s %s" % (self._path, self._args)
 
 def lighten_rgb(col, mul):
     mul = float(mul)
@@ -20,7 +34,7 @@ def lighten_rgb(col, mul):
 
 class OSCServer(liblo.ServerThread):
     def __init__(self, app):
-        liblo.ServerThread.__init__(self, LISTEN_PORT)
+        liblo.ServerThread.__init__(self, config.LISTEN_PORT)
         self.app = app
 
         self.osc_routes = {
@@ -28,7 +42,6 @@ class OSCServer(liblo.ServerThread):
 
     def parse_rgb(self, rgbstr):
         return [float(x) for x in re.match("RGB\(([\.0-9]+),([\.0-9]+),([\.0-9]+)\)", rgbstr).groups()]
-
 
     @liblo.make_method(None, None)
     def handle(self, path, args):
@@ -52,26 +65,19 @@ class OSCServer(liblo.ServerThread):
 
 class App(object):
     def __init__(self):
-        self.host = SEND_HOST
-        self.port = SEND_PORT
+        self.controller = Controller()
 
-        self.osc_target = liblo.Address(self.host, self.port, liblo.UDP)
         self.gui = Gui(self)
 
         self.gui.connect("delete-event", Gtk.main_quit)
         self.gui.connect('destroy', lambda quit: Gtk.main_quit())
 
-    def run(self):
-        try:
-            server = OSCServer(self)
-        except liblo.ServerError, err:
-            print str(err)
-            sys.exit()
 
-        #server.start()
+    def run(self):
         Gtk.main()
 
     def quit(self, *arg):
+        self.engine.teardown()
         self.gui.quit()
 
     def event(self, key, val):
@@ -81,28 +87,101 @@ class App(object):
                 ev.val = val
                 ev.send()
 
-class OSCButton(Gtk.Widget):
+class Controller(object):
+    def __init__(self):
+        self.host = config.SEND_HOST
+        self.port = config.SEND_PORT
+        self.osc_target = liblo.Address(self.host, self.port, liblo.UDP)
+        try:
+            self.midi_in = mido.open_input(config.MIDI_DEVICE, callback=self.receive_midi)
+            self.midi_out = mido.open_output(config.MIDI_DEVICE)
+        except:
+            config.USE_MIDI = False
 
-    def __init__(self, osc_target, msg):
+        self.action_map = {}
+        self.button_map = {}
+
+    def connect(self, button_id, button, actions):
+        button.connect("button-press-event", self.trigger, button, actions)
+        self.action_map[button_id] = actions
+        self.button_map[button_id] = button
+
+    def trigger(self, event, tgt, button, actions):
+        edge = button.get_edge()
+
+        # button toggled on, or trigger firing
+        if edge == "falling":
+            button.on()
+            if actions.has_key('on'):
+                self.execute_actions(actions['on'])
+
+        # button toggled off, or auto rising
+        if edge == "rising":
+            button.off()
+            if actions.has_key('on'):
+                self.execute_actions(actions['on'])
+
+    def execute_actions(self, actions):
+        for action in actions:
+            if DEBUG:
+                print action
+            if action['type'] == "OSC":
+                m = Message(action['path'], action['message'])
+                self.send_osc(m)
+            if action['type'] == "setstate":
+                b = self.button_map[action['id']]
+                if action["state"] == "on":
+                    b.on()
+                if action["state"] == "off":
+                    b.off()
+                if action["propagate"] == True:
+                    self.execute_actions(self.action_map[action['id']][action['state']])
+
+    def teardown(self):
+        if config.USE_MIDI:
+            self.midi_in.close()
+            self.midi_out.close()
+
+    def run(self):
+        try:
+            server = OSCServer(self)
+            #server.start()
+        except liblo.ServerError, err:
+            print(str(err))
+            sys.exit()
+
+    def receive_midi(self, msg):
+        print(msg)
+
+    def send_osc(self, msg):
+        liblo.send(self.osc_target, msg)
+
+    def clicked(self, tgt, ev):
+        self.trigger()
+
+    #def trigger(self):
+    #    self.send_msg()
+
+    def send_msg(self):
+        if DEBUG:
+            print 'Sending %s ' % self.msg
+        self.controller.send_osc(self.msg)
+
+class Button(Gtk.Widget):
+
+    def __init__(self, label, initial_state):
         Gtk.Widget.__init__(self)
-        self.osc = osc_target
-        self.msg = msg
+        #self.controller = controller
+        #self.msg = msg
         #self.connect("touch-event", self.touched)
-        self.connect("button-press-event", self.clicked)
+        #self.connect("button-press-event", self.clicked)
         self.color = (0.95, 0.95, 0.95)
         self.set_size_request(80, 60)
 
-    def touched(self, tgt, ev):
-        # a sort of debounce, cos touch fires loads of events
-        if ev.touch.type == Gdk.EventType.TOUCH_BEGIN:
-            if DEBUG:
-                print 'Sending %s ' % self.msg
-            liblo.send(self.osc, self.msg)
-
-    def clicked(self, tgt, ev):
-        if DEBUG:
-            print 'Sending %s ' % self.msg
-        liblo.send(self.osc, self.msg)
+    #def touched(self, tgt, ev):
+    #    # a sort of debounce, cos touch fires loads of events
+    #    if ev.touch.type == Gdk.EventType.TOUCH_BEGIN:
+    #        self.trigger()
 
     def do_draw(self, cr):
         color = (0.95, 0.95, 0.95)
@@ -144,11 +223,11 @@ class OSCButton(Gtk.Widget):
         cr.set_source_rgb(0.7, 0.7, 0.7)
         cr.fill()
 
-class ClipButton(OSCButton):
+class TriggerButton(Button):
 
-    def __init__(self, layer, label, osc_target, msg):
-        OSCButton.__init__(self, osc_target, msg)
-        self.color = (0.95, 0.95, 0.95)
+    def __init__(self, layer, label, initial_state):
+        Button.__init__(self, label, initial_state)
+        self.color = (0.85, 0.85, 0.85)
         self.has_content = False
         self.is_playing = False
         self.is_queued = False
@@ -157,17 +236,29 @@ class ClipButton(OSCButton):
         self.label_index = u"%i" % (layer, )
         self.label_content = label
 
+    def get_edge(self):
+        return "falling"
+
+    def on(self):
+        self.is_playing = True
+        if DEBUG:
+            print "on"
+        self.timeout_id = GObject.timeout_add(1000, self.off)
+        self.queue_draw()
+
+    def off(self):
+        self.is_playing = False
+        if DEBUG:
+            print "off"
+        self.queue_draw()
+
     def do_draw(self, cr):
         # paint background
+        if DEBUG:
+            print "draw"
         color = lighten_rgb(self.color, 1.4)
-        if self.has_content:
-            if self.is_playing:
-                if self.flash_state:
-                    color = self.color
-            elif self.is_queued:
-                color = lighten_rgb(self.color, 1.2)
-        else:
-            color = (0.95, 0.95, 0.95)
+        if self.is_playing:
+            color = self.color
 
         cr.set_source_rgb(*color)
 
@@ -189,11 +280,29 @@ class ClipButton(OSCButton):
 
         self.play_icon(cr)
 
+class ToggleButton(TriggerButton):
+    def get_edge(self):
+        if self.is_playing == True:
+            return "rising"
+        if self.is_playing == False:
+            return "falling"
 
-class StopButton(OSCButton):
+    def on(self):
+        self.is_playing = True
+        if DEBUG:
+            print "on"
+        self.queue_draw()
 
-    def __init__(self, osc_target, msg):
-        OSCButton.__init__(self, osc_target, msg)
+    def off(self):
+        self.is_playing = False
+        if DEBUG:
+            print "off"
+        self.queue_draw()
+
+class ClearButton(Button):
+
+    def __init__(self, controller, msg):
+        Button.__init__(self, controller, msg)
 
     def do_draw(self, cr):
         allocation = self.get_allocation()
@@ -217,30 +326,8 @@ class StopButton(OSCButton):
         cr.set_source_rgb(0.7, 0.7, 0.7)
         cr.fill()
 
-class SceneButton(OSCButton):
-
-    def __init__(self, scene, osc_target, msg):
-        OSCButton.__init__(self, osc_target, msg)
-        self.scene = scene
-
-    def do_draw(self, cr):
-        allocation = self.get_allocation()
-        cr.set_source_rgb(0.95, 0.95, 0.95)
-        cr.rectangle(0, 0, allocation.width, allocation.height)
-        cr.fill()
-        cr.set_source_rgb(0.9, 0.9, 0.9)
-        cr.rectangle(0, 0, allocation.width, allocation.height)
-        cr.stroke()
-
-        cr.set_source_rgb(0.6, 0.6, 0.6)
-        cr.select_font_face("Monaco", cairo.FONT_SLANT_NORMAL, 
-            cairo.FONT_WEIGHT_NORMAL)
-        cr.set_font_size(11)
-        cr.move_to(4,15)
-        cr.text_path("Scene %i" % self.scene)
-        cr.fill()
-
-        self.play_icon(cr)
+class LayerButton(Button):
+    pass
 
 class Gui(Gtk.Window):
     def __init__(self, app):
@@ -249,14 +336,14 @@ class Gui(Gtk.Window):
 
         #gobject.threads_init()
 
-        self.table = Gtk.Grid() #(max_layers, max_actions+1, True)
+        self.table = Gtk.Grid() #(config.MAX_LAYERS, config.MAX_ACTIONS+1, True)
         self.add(self.table)
-        self.leds = [[False for x in range(max_actions)] for x in range(max_layers)] 
+        self.leds = [[False for x in range(config.MAX_ACTIONS)] for x in range(config.MAX_LAYERS)] 
 
-        self.headers = [False for x in range(max_layers)] 
+        self.headers = [False for x in range(config.MAX_LAYERS)] 
 
 
-        for lc, layer in enumerate(LAYERS):
+        for lc, layer in enumerate(config.LAYERS):
 
             self.headers[lc] = Gtk.Label('%s' % layer['label'])
             self.table.attach(
@@ -265,25 +352,63 @@ class Gui(Gtk.Window):
                 1,1
             )
 
-            for ac, action in enumerate(layer['rundown']):
-                self.leds[lc][ac] = ClipButton(
+            for ac, c_action in enumerate(layer['rundown']):
+                btype = TriggerButton
+                # set some defaults
+                action = {
+                    'type': 'trigger', # trigger|toggle
+                    'initial': 'prime', # off|prime|on
+                    'actions': {},
+                }
+                action.update(c_action)
+                if DEBUG:
+                    print "Adding action: %s" % (action)
+
+                if action["type"] == "toggle":
+                    btype = ToggleButton
+                if action["type"] == "trigger":
+                    btype = TriggerButton
+                    
+                self.leds[lc][ac] = btype(
                     lc,
                     action['label'],
-                    self.app.osc_target,
-                    liblo.Message(action['path'], action['message'])
+                    initial_state = action['initial']
+                    #Message(action['path'], action['message'])
                 )
                 self.table.attach(
                     self.leds[lc][ac],
                     ac+1,lc,
                     1,1
                 )
+                self.app.controller.connect(action['id'], self.leds[lc][ac], action['actions'])
 
         self.show_all()
 
     def quit(self):
         Gtk.main_quit()
 
-if __name__=='__main__':
+def get_args():
+    import argparse
+
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--config',
+        default='config',
+        help='config module (default: config i.e. config.py)')
+    parser.add_argument('--debug', '-v',
+        default=False, action='store_const', const=True,
+        help='debug output')
+
+    args = parser.parse_args()
+    # people might accidentally supply a module filename, which we'll forgive them for
+    args.config=re.sub('.py$', '', args.config)
+    return args
+
+if __name__=="__main__":
+
+    args = get_args()
+    config = __import__(args.config, fromlist=['*'])
+    DEBUG = args.debug
+
     app = App()
     app.run()
 
