@@ -1,0 +1,11 @@
+appdirs==1.4.3
+Cython==0.25.2
+lo==0.2.0
+mido==1.2.3
+packaging==16.8
+pkg-resources==0.0.0
+pyliblo==0.10.0
+pyparsing==2.2.0
+pyth==0.6.0
+python-rtmidi==1.0.0
+six==1.10.0
