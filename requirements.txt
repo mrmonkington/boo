@@ -3,9 +3,16 @@ Cython==0.25.2
 lo==0.2.0
 mido==1.2.3
 packaging==16.8
+pgi==0.0.11.1
 pkg-resources==0.0.0
 pyliblo==0.10.0
 pyparsing==2.2.0
 pyth==0.6.0
 python-rtmidi==1.0.0
+requests==2.13.0
+ruamel.ordereddict==0.4.9
+ruamel.yaml==0.13.14
 six==1.10.0
+typing==3.5.3.0
+vext==0.6.8
+vext.gi==0.6.8
