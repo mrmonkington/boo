@@ -9,8 +9,13 @@ SEND_HOST = "10.0.20.119"
 SEND_PORT = 6250
 
 USE_MIDI = False
-MIDI_DEVICE = 'APC Key 25 MIDI 1'
-MIDI_CHANNEL = 0
+MIDI_DEVS = [
+    {
+        'id': 'apc',
+        'device': 'APC Key 25 MIDI 1',
+        'channel': 0
+    },
+]
 
 LAYERS = [
     {
@@ -21,7 +26,10 @@ LAYERS = [
                 'id': 'CAM1',
                 'label': 'CAM1',
                 'type': 'toggle',
-                'initial': 'prime',
+                'initial': 'off',
+                'midi': {
+                    'on': ['apc', 'note_on', 32, 0]
+                },
                 'actions': {
                     'on': [
                         { 'type': 'OSC', 'path': '/control/cam1/play', 'message': 1, },
@@ -30,7 +38,7 @@ LAYERS = [
                         #{ 'type': 'OSC', 'path': '/control/cam4/stop', 'message': 1, },
                         { 'type': 'setstate', 'id': 'CAM2', 'state': 'off', 'propagate': False },
                         { 'type': 'setstate', 'id': 'CAM3', 'state': 'off', 'propagate': False },
-                        { 'type': 'setstate', 'id': 'CAM4', 'state': 'off', 'propagate': False },
+                        { 'type': 'setstate', 'id': 'CAM4', 'state': 'prime', 'propagate': False },
                     ],
                     'off': []
                 }
