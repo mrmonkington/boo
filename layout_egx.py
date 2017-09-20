@@ -108,7 +108,7 @@ LAYERS = [
                 'initial': 'off',
                 'actions': {
                     'on': [
-                        { 'type': 'OSC', 'path': '/control/ready/stop', 'message': 1, },
+                        { 'type': 'OSC', 'path': '/control/ready/clear', 'message': 1, },
                         { 'type': 'setstate', 'id': 'READY', 'state': 'off', 'propagate': False },
                         { 'type': 'setstate', 'id': 'UPNEXT', 'state': 'off', 'propagate': False },
                         { 'type': 'setstate', 'id': 'END', 'state': 'prime', 'propagate': False },
@@ -123,7 +123,7 @@ LAYERS = [
                 'initial': 'off',
                 'actions': {
                     'on': [
-                        { 'type': 'OSC', 'path': '/control/ready/stop', 'message': 1, },
+                        { 'type': 'OSC', 'path': '/control/intermission/play', 'message': 1, },
                         { 'type': 'setstate', 'id': 'READY', 'state': 'off', 'propagate': False },
                         { 'type': 'setstate', 'id': 'UPNEXT', 'state': 'off', 'propagate': False },
                         { 'type': 'setstate', 'id': 'START', 'state': 'off', 'propagate': False },

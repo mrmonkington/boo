@@ -7,12 +7,11 @@ cameras
 vfx
   up next
   ready to start
-  start
+  start (kill all)
+  end session
   intermission
-  schedule
-  -
-  loop fundents
-  trailer
+  fundents + trailers (load first frame -> kill all -> play)
+  end of day
 
 slates
   current (bottom left)
@@ -21,18 +20,4 @@ slates
   EGX bug on
   Virgin bug on
 
-slot
-  12
-  1
-  2
-  3
-  4
-  5
-  6
-
-day
-  thurs
-  fri
-  sat
-  sun
 
