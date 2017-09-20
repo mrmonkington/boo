@@ -13,7 +13,7 @@ import colorsys
 # midi library
 import signal
 
-COLOR_PRIME = (0.95, 0.95, 0.35)
+COLOR_PRIME = (0.95, 0.85, 0.25)
 COLOR_ON = (0.35, 0.95, 0.35)
 COLOR_OFF = (0.95, 0.95, 0.95)
 
@@ -32,7 +32,7 @@ def darken_rgb(col, mul):
 
 class Button(Gtk.Widget):
 
-    def __init__(self, label, initial_state):
+    def __init__(self, layer, label, initial_state):
         Gtk.Widget.__init__(self)
         #self.controller = controller
         #self.msg = msg
@@ -81,9 +81,9 @@ class Button(Gtk.Widget):
 
     def play_icon(self, cr):
         allocation = self.get_allocation()
-        cr.move_to(allocation.width-16, 6)
-        cr.line_to(allocation.width-6, 11)
-        cr.line_to(allocation.width-16, 16)
+        cr.move_to(allocation.width-20, 10)
+        cr.line_to(allocation.width-10, 15)
+        cr.line_to(allocation.width-20, 20)
         cr.close_path()
         cr.set_source_rgb(*darken_rgb(COLOR_OFF, 1.4))
         cr.fill()
@@ -91,14 +91,14 @@ class Button(Gtk.Widget):
 class TriggerButton(Button):
 
     def __init__(self, layer, label, initial_state):
-        Button.__init__(self, label, initial_state)
+        Button.__init__(self, layer, label, initial_state)
         self.state = initial_state
         self.has_content = False
         self.is_queued = False
         self.flash_state = True
         self.initial_state = initial_state
 
-        self.label_index = u"%i" % (layer, )
+        #self.label_index = u"%i" % (layer, )
         self.label_content = label
 
     def get_edge(self):
@@ -139,19 +139,19 @@ class TriggerButton(Button):
         cr.set_source_rgb(*color)
 
         allocation = self.get_allocation()
-        cr.rectangle(0, 0, allocation.width, allocation.height)
+        cr.rectangle(2, 2, allocation.width - 4, allocation.height - 4)
         cr.fill()
         cr.set_source_rgb(*darken_rgb(color, 1.1))
-        cr.rectangle(0, 0, allocation.width, allocation.height)
+        cr.rectangle(2, 2, allocation.width - 4, allocation.height - 4)
         cr.stroke()
 
         cr.set_source_rgb(*darken_rgb(color, 10))
-        cr.select_font_face("Monaco", cairo.FONT_SLANT_NORMAL, 
+        cr.select_font_face("mono", cairo.FONT_SLANT_NORMAL, 
             cairo.FONT_WEIGHT_NORMAL)
-        cr.set_font_size(11)
-        cr.move_to(4,15)
-        cr.show_text(self.label_index)
-        cr.move_to(4,30)
+        cr.set_font_size(15)
+        #cr.move_to(4,15)
+        #cr.show_text(self.label_index)
+        cr.move_to(10,20)
         cr.show_text(self.label_content)
 
         self.play_icon(cr)
@@ -222,15 +222,21 @@ class Gui(Gtk.Window):
         self.table.set_hexpand(True)
         self.table.set_vexpand(True)
         self.add(self.table)
-        self.leds = [[False for x in range(config.MAX_ACTIONS)] for x in range(config.MAX_LAYERS)] 
+        max_layers = len(config.LAYERS) 
+        max_actions = max( len(r['rundown']) for r in config.LAYERS )
+        self.leds = [[False for x in range(max_actions)] for x in range(max_layers)] 
 
-        self.headers = [False for x in range(config.MAX_LAYERS)] 
+        self.headers = [False for x in range(max_layers)] 
 
 
         for lc, layer in enumerate(config.LAYERS):
 
             self.headers[lc] = Gtk.Label('%s' % layer['label'])
             self.headers[lc].set_valign(Gtk.Align.START)
+            self.headers[lc].set_margin_top(5)
+            self.headers[lc].set_margin_bottom(5)
+            self.headers[lc].set_margin_left(10)
+            self.headers[lc].set_margin_right(10)
             self.table.attach(
                 self.headers[lc],
                 0,lc,
@@ -256,7 +262,7 @@ class Gui(Gtk.Window):
                     
                 print action
                 print action['initial']
-                print
+                print lc, ac
                 self.leds[lc][ac] = btype(
                     lc,
                     action['label'],

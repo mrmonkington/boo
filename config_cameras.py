@@ -1,21 +1,6 @@
 from defaults import *
 
-MAX_LAYERS = 1
-MAX_ACTIONS = 4
-
-LISTEN_PORT = 9000
-
-SEND_HOST = "10.0.20.119"
-SEND_PORT = 6250
-
-USE_MIDI = False
-MIDI_DEVS = [
-    {
-        'id': 'apc',
-        'device': 'APC Key 25 MIDI 1',
-        'channel': 0
-    },
-]
+from config_common import *
 
 LAYERS = [
     {
