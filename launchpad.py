@@ -6,15 +6,18 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 from gi.repository import GObject
 from gi.repository import Gdk
-#from gi.repository import cairo
-import cairo
+from gi.repository import cairo
+#import cairo
 import re
 import colorsys
 
 import gui
 
 # midi library
-import mido
+try:
+    import mido
+except:
+    pass
 import signal
 
 #from config import *
