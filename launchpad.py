@@ -72,6 +72,7 @@ class App(object):
 
         self.gui.connect("delete-event", Gtk.main_quit)
         self.gui.connect('destroy', lambda quit: Gtk.main_quit())
+        self.gui.connect('key_press_event', self.gui.key_press)
 
 
     def run(self):

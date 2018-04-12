@@ -13,6 +13,8 @@ import colorsys
 # midi library
 import signal
 
+import functools
+
 COLOR_PRIME = (0.95, 0.85, 0.25)
 COLOR_ON = (0.35, 0.95, 0.35)
 COLOR_OFF = (0.95, 0.95, 0.95)
@@ -215,6 +217,7 @@ class Gui(Gtk.Window):
     def __init__(self, app, config):
         Gtk.Window.__init__(self, title="OSC Launchpad")
         self.app = app
+        self.shortcuts = {}
 
         #gobject.threads_init()
 
@@ -249,6 +252,7 @@ class Gui(Gtk.Window):
                 action = {
                     'type': 'trigger', # trigger|toggle
                     'initial': 'prime', # off|prime|on
+                    'shortcut': False, # string
                     'actions': {},
                 }
                 action.update(c_action)
@@ -275,8 +279,14 @@ class Gui(Gtk.Window):
                     1,1
                 )
                 self.app.controller.connect(action['id'], self.leds[lc][ac], action['actions'])
+                if action['shortcut'] != False:
+                    self.shortcuts[action['shortcut']] = functools.partial(self.app.controller.trigger, False, False, self.leds[lc][ac], action['actions'])
 
         self.show_all()
+
+    def key_press(self, tgt, event):
+        if self.shortcuts.has_key(event.string):
+            self.shortcuts[event.string]()
 
     def quit(self):
         Gtk.main_quit()

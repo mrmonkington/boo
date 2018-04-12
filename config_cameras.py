@@ -26,7 +26,8 @@ LAYERS = [
                         { 'type': 'setstate', 'id': 'CAM4', 'state': 'prime', 'propagate': False },
                     ],
                     'off': []
-                }
+                },
+                'shortcut': '1',
             },
             {
                 'id': 'CAM2',
@@ -44,7 +45,8 @@ LAYERS = [
                         { 'type': 'setstate', 'id': 'CAM4', 'state': 'off', 'propagate': False },
                     ],
                     'off': []
-                }
+                },
+                'shortcut': '2',
             },
             {
                 'id': 'CAM3',
@@ -62,7 +64,8 @@ LAYERS = [
                         { 'type': 'setstate', 'id': 'CAM4', 'state': 'off', 'propagate': False },
                     ],
                     'off': []
-                }
+                },
+                'shortcut': '3',
             },
             {
                 'id': 'CAM4',
@@ -80,7 +83,8 @@ LAYERS = [
                         { 'type': 'setstate', 'id': 'CAM3', 'state': 'off', 'propagate': False },
                     ],
                     'off': []
-                }
+                },
+                'shortcut': '4',
             },
         ],
     },
