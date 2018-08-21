@@ -109,7 +109,7 @@ class TriggerButton(Button):
     def on(self):
         self.state = "on"
         if DEBUG:
-            print "on"
+            print ("on")
         if self.initial_state == 'off':
             self.timeout_id = GObject.timeout_add(1000, self.off)
         if self.initial_state == 'prime':
@@ -119,20 +119,20 @@ class TriggerButton(Button):
     def off(self):
         self.state = "off"
         if DEBUG:
-            print "off"
+            print ("off")
         self.queue_draw()
 
     def prime(self):
         self.state = "prime"
         if DEBUG:
-            print "prime"
+            print ("prime")
         self.queue_draw()
 
     def do_draw(self, cr):
         # paint background
         color = COLOR_OFF
         if DEBUG:
-            print "draw"
+            print ("draw")
         if self.state == "on":
             color = COLOR_ON
         if self.state == "prime":
@@ -168,19 +168,19 @@ class ToggleButton(TriggerButton):
     def on(self):
         self.state = "on"
         if DEBUG:
-            print "on"
+            print ("on")
         self.queue_draw()
 
     def off(self):
         self.state = "off"
         if DEBUG:
-            print "off"
+            print ("off")
         self.queue_draw()
 
     def prime(self):
         self.state = "prime"
         if DEBUG:
-            print "prime"
+            print ("prime")
         self.queue_draw()
 
 class ClearButton(Button):
@@ -257,16 +257,16 @@ class Gui(Gtk.Window):
                 }
                 action.update(c_action)
                 if DEBUG:
-                    print "Adding action: %s" % (action)
+                    print ("Adding action: %s" % (action))
 
                 if action["type"] == "toggle":
                     btype = ToggleButton
                 if action["type"] == "trigger":
                     btype = TriggerButton
                     
-                print action
-                print action['initial']
-                print lc, ac
+                print (action)
+                print (action['initial'])
+                print (lc, ac)
                 self.leds[lc][ac] = btype(
                     lc,
                     action['label'],
@@ -285,7 +285,7 @@ class Gui(Gtk.Window):
         self.show_all()
 
     def key_press(self, tgt, event):
-        if self.shortcuts.has_key(event.string):
+        if event.string in self.shortcuts:
             self.shortcuts[event.string]()
 
     def quit(self):
