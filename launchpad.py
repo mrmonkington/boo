@@ -47,8 +47,8 @@ class OSCServer(liblo.ServerThread):
     @liblo.make_method(None, None)
     def handle(self, path, args):
         if DEBUG:
-            print "received '%s'" % path
-            print args
+            print ("received '%s'" % path)
+            print (args)
         for pattern, action in self.osc_routes.items():
             match = re.match(pattern, path)
             if match:
@@ -114,21 +114,21 @@ class Controller(object):
         # button toggled on, or trigger firing
         if edge == "falling":
             button.on()
-            if actions.has_key('on'):
+            if 'on' in actions:
                 self.execute_actions(actions['on'])
 
         # button toggled off, or auto rising
         if edge == "rising":
             button.off()
-            if actions.has_key('off'):
+            if 'off' in actions:
                 self.execute_actions(actions['off'])
 
     def execute_actions(self, actions):
         for action in actions:
             if DEBUG:
-                print action
+                print (action)
             if action['type'] == "OSC":
-                print "Sending %s" % action['path']
+                print ("Sending %s" % action['path'])
                 m = Message(action['path'], action['message'])
                 self.send_osc(m)
             if action['type'] == "setstate":
@@ -151,7 +151,7 @@ class Controller(object):
         try:
             server = OSCServer(self)
             #server.start()
-        except liblo.ServerError, err:
+        except liblo.ServerError as err:
             print(str(err))
             sys.exit()
 
@@ -169,7 +169,7 @@ class Controller(object):
 
     def send_msg(self):
         if DEBUG:
-            print 'Sending %s ' % self.msg
+            print ('Sending %s ' % self.msg)
         self.controller.send_osc(self.msg)
 
 

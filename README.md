@@ -4,14 +4,14 @@ Boo
 A matrix of buttons useful for triggering events in OSC aware apps,
 specifically in this case CasparCG.
 
-Written for Python2 + GTK3 + Liblo.
+Written for Python3 + GTK3 (via gi) + Liblo.
 
 ## Installation
 
-Distribution shipped `liblo` is fine, and the python liblo module depends on Cython, so this should be all you need to do:
+Distribution shipped `liblo` is fine, and the python liblo module depends on Cython, so this should be all you need to do on Ubuntu 18.04:
 
 ```
-apt-get install liblo cython
+apt-get install liblo cython libgirepository1.0-dev
 pip install -r requirements #preferably in a virtualenv, right?
 ```
 
